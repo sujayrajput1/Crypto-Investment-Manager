@@ -1,3 +1,129 @@
+# Crypto Portfolio Manager (Crypto Investment Manager)
+
+**Infosys Springboard 6.0 | Python Crypto Investment Manager Project**  
+
+This repository hosts the source code for the **Crypto Portfolio Manager**, a system designed to calculate optimal crypto asset mixes and perform risk monitoring.
+
+---
+
+## Project Architecture
+
+The system is built using a **Decoupled Two-Tier Architecture**, ensuring the front-end and back-end are independent and communicate securely via API calls.
+
+| Component    | Technology       | Role                                                                 |
+|-------------|-------------------|----------------------------------------------------------------------|
+| Backend API | Python (FastAPI)  | Handles all data processing, calculations, and MongoDB interactions. |
+| Database    | MongoDB Compass   | Stores user authentication and future risk trend data.               |
+| Frontend UI | React.js          | Provides the user interface for input and display.                   |
+| Security    | JWT               | Secures the data pipeline between the Frontend and Backend API.      |
+
+---
+
+## 🟢 MILESTONE 1 (Week 1 & 2): Setup and Verification Summary
+
+Milestone 1 successfully established the project environment and verified all core technology integrations.
+
+| Milestone 1 Requirement      | Technical Implementation                                                                 | Status     |
+|------------------------------|----------------------------------------------------------------------------------------|-----------|
+| Prepare Python with database | MongoDB Compass connection verified and test user schema inserted.                        | COMPLETED |
+| Teach parallel ways & math   | Theoretical foundation established: Sharpe Ratio (Math) and Threading/Multiprocessing. | COMPLETED |
+| Plan crypto types            | Data Strategy defined: Uses historical data (Kaggle) for analysis and real-time data (CoinGecko API) for monitoring. | COMPLETED |
+| End-to-End Integration       | Full authentication pipeline (React Login → JWT → MongoDB) successfully tested and verified. | COMPLETED |
+
+---
+
+## 🔵 MILESTONE 2: Module 1 - Investment Mix Calculator
+
+## 🔵 MILESTONE 2: Module 1 - Investment Mix Calculator
+
+Milestone 2 implemented the core mathematical and concurrency engine. The system can now suggest a **"Profitable Mix"** based on historical risk and return analysis.
+
+| Milestone 2 Requirement | Technical Implementation                                                                 | Status     |
+|-------------------------|----------------------------------------------------------------------------------------|-----------|
+| Log Returns Calculation | Implemented log-normal return processing using NumPy and Pandas.                        | COMPLETED |
+| Monte Carlo Engine      | Built a parallelized engine running 10,000 simulations per request.                    | COMPLETED |
+| Multiprocessing         | Optimized performance using Python's Pool to utilize multi-core CPUs.                  | COMPLETED |
+| Investment Strategy UI  | New React interface for budget input and selection of 56+ unique assets.                | COMPLETED |
+| Data Persistence        | Detailed profitable mixes and Sharpe ratios saved to MongoDB history.                  | COMPLETED |
+
+### Key Formulas for Investment Mix Calculation
+
+1. **Log Returns** (for each asset \(i\))  
+
+\[
+R_i(t) = \ln \frac{P_i(t)}{P_i(t-1)}
+\]  
+
+Where:  
+- \(R_i(t)\) = log return of asset \(i\) at time \(t\)  
+- \(P_i(t)\) = price of asset \(i\) at time \(t\)  
+
+---
+
+2. **Portfolio Return**  
+
+\[
+R_p = \sum_{i=1}^{n} w_i \cdot \bar{R_i}
+\]  
+
+Where:  
+- \(R_p\) = expected portfolio return  
+- \(w_i\) = weight of asset \(i\) in the portfolio  
+- \(\bar{R_i}\) = mean historical return of asset \(i\)  
+- \(n\) = total number of assets  
+
+---
+
+3. **Portfolio Volatility**  
+
+\[
+\sigma_p = \sqrt{\sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \sigma_{ij}}
+\]  
+
+Where:  
+- \(\sigma_p\) = portfolio standard deviation (risk)  
+- \(w_i, w_j\) = weights of assets \(i\) and \(j\)  
+- \(\sigma_{ij}\) = covariance between asset \(i\) and asset \(j\)  
+
+---
+
+4. **Sharpe Ratio** (to select optimal portfolio)  
+
+\[
+\text{Sharpe Ratio} = \frac{R_p - R_f}{\sigma_p}
+\]  
+
+Where:  
+- \(R_f\) = risk-free rate  
+- \(R_p\) = portfolio return  
+- \(\sigma_p\) = portfolio volatility  
+
+---
+
+These formulas allow the system to run **Monte Carlo simulations** for thousands of portfolios and select the one with the **highest Sharpe Ratio** as the “Profitable Mix.”
+
+
+
+## 🟡 MILESTONE 3: Module 2 - Risk Monitoring & Alerts
+
+The final module enables live tracking, professional file saving, and urgent risk alerts.
+
+| Milestone 3 Requirement | Technical Implementation                                                                 | Status     |
+|-------------------------|----------------------------------------------------------------------------------------|-----------|
+| Risk Checker            | Uses parallel tasks to fetch live prices and apply status badges.                       | COMPLETED |
+| Identity System         | Persistent user login/signup with hashed password security.                             | COMPLETED |
+| Predictor               | Predicts profitable mixes from historical dataset.csv changes.                          | COMPLETED |
+| Simple Database         | Portfolio trends and removals are synced instantly to the cloud.                        | COMPLETED |
+| File Saver              | Generates clean, text-based CSV reports for Excel compatibility.                        | COMPLETED |
+| Alert Link              | Immediate email notifications for DANGER zone assets.                                    | COMPLETED |
+
+### Live Risk Logic
+
+The **Risk Engine** evaluates assets using a percentage-based threshold system:
+
+- 🟢 **Profit**: Price increase > 5% since purchase.    
+- 🔴 **Loss**: Price drop > 5% (Triggers immediate email alert).  
+
 # Crypto Investment Manager
 
 A comprehensive cryptocurrency investment management platform that helps users optimize their investment portfolios, analyze risks, and track performance with intelligent alerts and reporting features.
@@ -36,46 +162,6 @@ A comprehensive cryptocurrency investment management platform that helps users o
 - **Mock Mode**: Full functionality available without backend for demo purposes
 - **LocalStorage**: Client-side data persistence for offline functionality
 
-## Quick Start
-
-### Prerequisites
-- Node.js 14+ 
-- npm or yarn package manager
-
-### Setup Instructions
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd crypto-investment-manager
-   ```
-
-2. **Install dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   npm start
-   ```
-
-4. **Open the application**
-   Navigate to `http://localhost:3000` in your browser
-
-### Backend Setup (Optional)
-The application includes a complete mock mode that works without a backend. To connect to a real backend:
-
-1. **Start the backend server**
-   ```bash
-   cd backend
-   npm install
-   npm start
-   ```
-
-2. **Configure API endpoint**
-   The frontend will automatically connect to `http://localhost:8001` for API calls
 
 ## Usage Guide
 
@@ -172,132 +258,6 @@ Portfolio Management → Risk Analysis → Alert Generation → Reporting
 User-Specific Storage (localStorage) → Cross-Session Persistence
 ```
 
-### User Data Isolation
-Each user has completely separate data stored with email-based keys:
-- `portfolio_user@example.com`: User's portfolio data
-- `reports_user@example.com`: User's reports
-- `alerts_user@example.com`: User's alerts
-
-### Component Structure
-```
-src/
-├── components/          # Reusable UI components
-├── pages/              # Main application pages
-│   ├── Dashboard.jsx     # Main dashboard and portfolio management
-│   ├── Portfolio.jsx     # Portfolio optimization
-│   ├── Risk.jsx         # Risk analysis and predictions
-│   ├── Reports.jsx       # Report generation and export
-│   ├── Alerts.jsx       # Alert management
-│   ├── Login.jsx        # User authentication
-│   ├── Signup.jsx       # User registration
-│   └── Landing.jsx      # Landing page
-├── services/           # API and business logic
-│   ├── AuthService.js    # Authentication and user management
-│   └── ApiService.js    # API communication
-└── App.jsx            # Main application component and routing
-```
-
-## Configuration
-
-### Environment Variables
-Create a `.env` file in the frontend directory:
-```env
-REACT_APP_API_BASE_URL=http://localhost:8001
-```
-
-### Demo Mode
-The application includes a demo mode that works without a backend:
-- Set `DEMO_MODE = true` in `src/services/AuthService.js`
-- All functionality works with mock data
-- Perfect for demonstrations and testing
-
-## UI/UX Features
-
-### Responsive Design
-- **Mobile-First**: Optimized for mobile devices
-- **Tablet Support**: Responsive layout for tablets
-- **Desktop Experience**: Full-featured desktop interface
-
-### User Experience
-- **Intuitive Navigation**: Clear navigation between features
-- **Real-time Updates**: Live price updates and portfolio changes
-- **Smart Defaults**: Intelligent default values for new users
-- **Error Handling**: Graceful error handling with user-friendly messages
-
-### Visual Design
-- **Modern Interface**: Clean, professional design
-- **Consistent Styling**: Unified design language across all pages
-- **Interactive Elements**: Smooth transitions and hover effects
-- **Data Visualization**: Charts and graphs for portfolio analysis
-
-## Deployment
-
-### Production Build
-```bash
-npm run build
-```
-
-### Deployment Options
-- **Static Hosting**: Deploy to Netlify, Vercel, or GitHub Pages
-- **Server Hosting**: Deploy to any web server with static file serving
-- **Docker**: Containerize for easy deployment
-
-## Contributing
-
-### Development Guidelines
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-### Code Standards
-- Use ES6+ JavaScript features
-- Follow React best practices
-- Maintain consistent code style
-- Add comments for complex logic
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-### Common Issues
-
-#### Login Problems
-- **Backend Unavailable**: The app automatically switches to demo mode
-- **Invalid Credentials**: Check email and password
-- **Data Not Loading**: Clear browser cache and try again
-
-#### Portfolio Issues
-- **Prices Not Updating**: Check internet connection
-- **Investments Not Saving**: Ensure you're logged in
-- **Calculations Wrong**: Refresh the page to reload data
-
-#### Alert Problems
-- **Alerts Not Triggering**: Check threshold values
-- **Too Many Alerts**: Review and remove unnecessary alerts
-- **Auto-Alerts Missing**: Add investments to trigger generation
-
-### Getting Help
-- Check the browser console for error messages
-- Review the network tab for API issues
-- Ensure all dependencies are installed correctly
-
-## Updates and Future Features
-
-### Planned Enhancements
-- **More Cryptocurrencies**: Support for additional coins
-- **Advanced Analytics**: Machine learning predictions
-- **Mobile App**: Native mobile applications
-- **Social Features**: Portfolio sharing and comparison
-- **Tax Reporting**: Automated tax calculation and reporting
-
-### Version History
-- **v1.0.0**: Initial release with core functionality
-- **v1.1.0**: Added user data isolation and persistence
-- **v1.2.0**: Enhanced risk analysis and alert system
 
 ---
 
