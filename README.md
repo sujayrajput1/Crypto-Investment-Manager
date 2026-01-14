@@ -34,7 +34,6 @@ Milestone 1 successfully established the project environment and verified all co
 
 ## 🔵 MILESTONE 2: Module 1 - Investment Mix Calculator
 
-## 🔵 MILESTONE 2: Module 1 - Investment Mix Calculator
 
 Milestone 2 implemented the core mathematical and concurrency engine. The system can now suggest a **"Profitable Mix"** based on historical risk and return analysis.
 
