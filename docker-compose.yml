@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: crypto-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: crypto_investment_manager
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build: ./backend
+    container_name: crypto-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/crypto_investment_manager
+      - SECRET_KEY=your-super-secret-jwt-key-change-in-production
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+
+  frontend:
+    build: ./frontend
+    container_name: crypto-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+    working_dir: /app
+
+volumes:
+  mongodb_data:
