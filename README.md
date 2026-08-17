@@ -1,3 +1,4 @@
+
 # Crypto Investment Manager
 
 A comprehensive cryptocurrency investment management platform that helps users optimize their investment portfolios, analyze risks, and track performance with intelligent alerts and reporting features.
@@ -302,3 +303,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Crypto Investment Manager** - Your intelligent companion for cryptocurrency investment management and portfolio optimization.
+=======
+# Crypto-Investment-Manager
+Infosys Springboard 6.0 | Python Crypto Investment Manager Project This repository hosts the source code for the Crypto Portfolio Manager, a system designed to calculate optimal crypto asset mixes and perform risk monitoring.
+>>>>>>> 92280b4701bb5ba1159e2a95cf8d6cd955f05312
