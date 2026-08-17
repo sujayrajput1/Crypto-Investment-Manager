@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DocumentTextIcon, ArrowDownTrayIcon, ChartBarIcon, CalculatorIcon, SparklesIcon, PlusIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, DocumentTextIcon, ArrowDownTrayIcon, PlusIcon, TrashIcon, CalendarIcon, ArrowUpIcon, CalculatorIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { ApiService } from '../services/ApiService';
 import { AuthService } from '../services/AuthService';
+import { formatINR, formatINRPlain } from '../utils/currency.jsx';
 
 function Reports() {
   const [reports, setReports] = useState([]);
@@ -489,7 +490,7 @@ function Reports() {
                   <span className="text-sm text-gray-600">
                     Current Portfolio Value: 
                     <span className="font-semibold text-green-600">
-                      ${dashboardData.total_value?.toLocaleString() || 0}
+                      {formatINR(dashboardData.total_value || 0)}
                     </span>
                   </span>
                   <span className="text-sm text-gray-600">
@@ -551,7 +552,7 @@ function Reports() {
                           <span className="text-sm text-gray-600">{item.weight}%</span>
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
-                          ${item.investment.toLocaleString()} ({item.quantity.toFixed(4)} units @ ${item.price})
+                          {formatINR(item.investment)} ({item.quantity.toFixed(4)} units @ ${item.price})
                         </div>
                         <div className="mt-2">
                           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -574,8 +575,11 @@ function Reports() {
                       <p className="text-2xl font-bold text-green-900">
                         {((investmentBreakdown.expected_return || 0) * 100).toFixed(1)}%
                       </p>
-                      <p className="text-sm text-green-700">
-                        ${(investmentBreakdown.totalInvestment * (investmentBreakdown.expected_return || 0)).toLocaleString()} profit
+                      <p className="text-xs text-green-700 mt-1">
+                        Expected profit: {formatINR((investmentBreakdown.totalInvestment || 0) * (investmentBreakdown.expected_return || 0))}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        Total value after return: {formatINR((investmentBreakdown.totalInvestment || 0) + ((investmentBreakdown.totalInvestment || 0) * (investmentBreakdown.expected_return || 0)))}
                       </p>
                     </div>
 
@@ -593,7 +597,7 @@ function Reports() {
                     <div className="bg-white rounded-lg p-4 border border-purple-200">
                       <p className="text-sm font-medium text-purple-600">Total Investment</p>
                       <p className="text-2xl font-bold text-purple-900">
-                        ${(investmentBreakdown.totalInvestment || 0).toLocaleString()}
+                        {formatINR(investmentBreakdown.totalInvestment || 0)}
                       </p>
                       <p className="text-sm text-purple-700">
                         Strategy: {investmentBreakdown.strategy || 'N/A'}
@@ -636,7 +640,7 @@ function Reports() {
                       <div className="flex items-center space-x-3">
                         <div className="text-right">
                           <p className="text-lg font-semibold text-gray-900">
-                            ${report.value.toLocaleString()}
+                            {formatINR(report.value)}
                           </p>
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             report.risk_level === 'High' ? 'bg-red-100 text-red-800' :
@@ -681,7 +685,7 @@ function Reports() {
             <div className="bg-green-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-green-600 mb-2">Total Value</h3>
               <p className="text-2xl font-bold text-green-900">
-                ${reports.reduce((sum, r) => sum + r.value, 0).toLocaleString()}
+                {formatINR(reports.reduce((sum, r) => sum + r.value, 0))}
               </p>
               <p className="text-sm text-green-600">Across all reports</p>
             </div>
@@ -721,7 +725,7 @@ function Reports() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Portfolio Value ($)
+                  Portfolio Value (USD)
                 </label>
                 <input
                   type="number"
@@ -732,6 +736,7 @@ function Reports() {
                   step="0.01"
                   disabled={newReport.type === 'Portfolio Summary'}
                 />
+                <p className="text-xs text-gray-500 mt-1">≈ {formatINR(newReport.value || 0)} INR</p>
                 {newReport.type === 'Portfolio Summary' && (
                   <p className="text-xs text-green-600 mt-1">
                     Auto-populated from current portfolio
@@ -739,7 +744,7 @@ function Reports() {
                 )}
                 {newReport.type !== 'Portfolio Summary' && dashboardData && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Current portfolio: ${dashboardData.total_value?.toLocaleString() || 0}
+                    Current portfolio: {formatINR(dashboardData.total_value || 0)}
                   </p>
                 )}
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChartBarIcon, CurrencyDollarIcon, ShieldCheckIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, CurrencyDollarIcon, ShieldCheckIcon, ArrowUpIcon } from '@heroicons/react/24/outline';
 import { ApiService } from '../services/ApiService';
+import { INRIcon } from '../utils/currency.jsx';
 
 function Landing() {
   const [cryptoPrices, setCryptoPrices] = useState([]);
@@ -139,7 +140,7 @@ function Landing() {
           </div>
           
           <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 border border-white/20">
-            <CurrencyDollarIcon className="h-12 w-12 text-yellow-400 mb-4" />
+            <INRIcon />
             <h3 className="text-xl font-semibold text-white mb-3">
               Automation & Alerts
             </h3>

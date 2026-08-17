@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
@@ -15,7 +15,7 @@ app = FastAPI(title="Crypto Investment Manager API")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -124,8 +124,7 @@ async def fetch_crypto_prices():
 @app.on_event("startup")
 async def startup_event():
     try:
-        # Initialize MongoDB with demo data
-        initialize_demo_data()
+        # Initialize MongoDB connection (no demo data)
         print("MongoDB initialized successfully")
     except Exception as e:
         print(f"Error during startup: {e}")
@@ -174,8 +173,57 @@ async def login(user: UserLogin):
 # Protected endpoints
 @app.get("/dashboard/summary")
 async def get_dashboard_summary():
-    # Get portfolio data from MongoDB
-    return mongo_service.get_portfolio_summary()
+    # Calculate dynamic predicted return based on actual portfolio data
+    try:
+        portfolio_data = mongo_service.get_portfolio_summary()
+        
+        if portfolio_data and portfolio_data.get('assets'):
+            # Calculate predicted return based on actual assets
+            crypto_weights = {
+                'BTC': 0.4,    # High risk, high return
+                'ETH': 0.3,    # Medium risk, medium return  
+                'BNB': 0.1,    # Low risk, low return
+                'ADA': 0.1,    # Low risk, low return
+                'SOL': 0.1     # High risk, high return
+            };
+            
+            weighted_return = 0;
+            for asset in portfolio_data['assets']:
+                weight = crypto_weights.get(asset.get('symbol'), 0.2);
+                asset_return = (asset.get('change_percentage_24h', 0)) / 100;
+                weighted_return += weight * asset_return;
+            
+            # Calculate risk level based on diversification
+            unique_symbols = len(set(asset.get('symbol') for asset in portfolio_data['assets']));
+            diversification_score = unique_symbols / 5;  # 5 is max possible symbols
+            
+            if diversification_score >= 0.8:
+                risk_level = 'Low'
+            elif diversification_score >= 0.6:
+                risk_level = 'Medium'
+            else:
+                risk_level = 'High'
+            
+            portfolio_data['predicted_return'] = weighted_return
+            portfolio_data['risk_level'] = risk_level
+            
+            return portfolio_data
+        else:
+            # Return empty portfolio with default values
+            return {
+                "total_value": 0,
+                "assets": [],
+                "risk_level": "Medium",
+                "predicted_return": 0.0
+            }
+    except Exception as e:
+        print(f"Error calculating portfolio summary: {e}")
+        return {
+            "total_value": 0,
+            "assets": [],
+            "risk_level": "Medium",
+            "predicted_return": 0.0
+        }
 
 @app.get("/crypto/prices")
 async def get_crypto_prices():
@@ -254,25 +302,46 @@ async def create_alert(alert_data: dict):
 
 @app.get("/alerts")
 async def get_alerts():
-    # Mock alerts data
-    return [
-        {
-            "id": "alert_1",
-            "symbol": "BTC",
-            "condition": "price_above",
-            "threshold": 50000,
-            "message": "BTC price alert",
-            "triggered": False
-        }
-    ]
+    # Return empty alerts for new users
+    return []
 
 @app.post("/portfolio/add")
 async def add_portfolio_asset(asset_data: dict):
-    # Add new asset to portfolio in MongoDB
-    result = mongo_service.add_portfolio_asset(asset_data)
-    if result:
-        return {"message": "Asset added successfully", "id": result}
-    else:
+    # Get current crypto price and add it to the asset data
+    try:
+        crypto_prices = mongo_service.get_crypto_prices()
+        current_price = None
+        change_24h = 0
+        change_percentage_24h = 0
+        
+        # Find current price for the asset
+        for price_data in crypto_prices:
+            if price_data['symbol'] == asset_data.get('symbol'):
+                current_price = price_data['price']
+                change_24h = price_data.get('change_24h', 0)
+                change_percentage_24h = price_data.get('change_percentage_24h', 0)
+                break
+        
+        # Calculate value if not provided
+        amount = asset_data.get('amount', 0)
+        if current_price and not asset_data.get('current_price'):
+            asset_data['current_price'] = current_price
+            asset_data['value'] = amount * current_price
+        elif not asset_data.get('value'):
+            asset_data['value'] = amount * asset_data.get('current_price', 0)
+        
+        # Add price change data
+        asset_data['change_24h'] = change_24h
+        asset_data['change_percentage_24h'] = change_percentage_24h
+        
+        # Add new asset to portfolio in MongoDB
+        result = mongo_service.add_portfolio_asset(asset_data)
+        if result:
+            return {"message": "Asset added successfully", "id": result}
+        else:
+            raise HTTPException(status_code=500, detail="Error adding asset")
+    except Exception as e:
+        print(f"Error adding portfolio asset: {e}")
         raise HTTPException(status_code=500, detail="Error adding asset")
 
 @app.delete("/portfolio/remove/{symbol}")

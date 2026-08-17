@@ -2,6 +2,7 @@ import pymongo
 from pymongo import MongoClient
 from datetime import datetime
 import os
+import hashlib
 from typing import List, Dict, Any
 
 class MongoDBConnection:
@@ -63,13 +64,29 @@ class MongoDBService:
             print(f"Error getting user: {e}")
             return None
     
+    def get_all_users(self) -> List[Dict[str, Any]]:
+        """Get all users"""
+        users_collection = self.connection.get_collection('users')
+        try:
+            users = list(users_collection.find({}))
+            for user in users:
+                user['_id'] = str(user['_id'])
+            return users
+        except Exception as e:
+            print(f"Error getting all users: {e}")
+            return []
+    
     # Portfolio operations
-    def get_portfolio_summary(self) -> Dict[str, Any]:
-        """Get portfolio summary with assets"""
+    def get_portfolio_summary(self, user_email: str = None) -> Dict[str, Any]:
+        """Get portfolio summary with assets for a specific user"""
         portfolio_collection = self.connection.get_collection('portfolio')
         try:
-            # Get all portfolio assets
-            assets = list(portfolio_collection.find({}))
+            # Get portfolio assets for specific user
+            if user_email:
+                assets = list(portfolio_collection.find({"user_email": user_email}))
+            else:
+                # Fallback to all assets (for demo/debug)
+                assets = list(portfolio_collection.find({}))
             
             # Convert ObjectId to string for JSON serialization
             for asset in assets:
@@ -93,11 +110,14 @@ class MongoDBService:
                 "predicted_return": 0.15
             }
     
-    def add_portfolio_asset(self, asset_data: Dict[str, Any]) -> str:
-        """Add a new asset to portfolio"""
+    def add_portfolio_asset(self, asset_data: Dict[str, Any], user_email: str = None) -> str:
+        """Add a new asset to portfolio for a specific user"""
         portfolio_collection = self.connection.get_collection('portfolio')
         try:
             asset_data['created_at'] = datetime.utcnow()
+            # Add user_email to asset if provided
+            if user_email:
+                asset_data['user_email'] = user_email
             result = portfolio_collection.insert_one(asset_data)
             return str(result.inserted_id)
         except Exception as e:
@@ -117,11 +137,16 @@ class MongoDBService:
             print(f"Error updating portfolio asset: {e}")
             return False
     
-    def remove_portfolio_asset(self, symbol: str) -> bool:
-        """Remove an asset from portfolio"""
+    def remove_portfolio_asset(self, symbol: str, user_email: str = None) -> bool:
+        """Remove an asset from portfolio for a specific user"""
         portfolio_collection = self.connection.get_collection('portfolio')
         try:
-            result = portfolio_collection.delete_one({"symbol": symbol})
+            # Remove asset for specific user if user_email provided
+            if user_email:
+                result = portfolio_collection.delete_one({"symbol": symbol, "user_email": user_email})
+            else:
+                # Remove all assets with this symbol (fallback)
+                result = portfolio_collection.delete_one({"symbol": symbol})
             return result.deleted_count > 0
         except Exception as e:
             print(f"Error removing portfolio asset: {e}")
@@ -163,11 +188,16 @@ class MongoDBService:
             return False
     
     # Alerts operations
-    def get_alerts(self) -> List[Dict[str, Any]]:
-        """Get all alerts"""
+    def get_alerts(self, user_email: str = None) -> List[Dict[str, Any]]:
+        """Get alerts for a specific user"""
         alerts_collection = self.connection.get_collection('alerts')
         try:
-            alerts = list(alerts_collection.find({}))
+            # Get alerts for specific user if user_email provided
+            if user_email:
+                alerts = list(alerts_collection.find({"user_email": user_email}))
+            else:
+                # Get all alerts (fallback)
+                alerts = list(alerts_collection.find({}))
             for alert in alerts:
                 alert['_id'] = str(alert['_id'])
             return alerts
@@ -175,11 +205,14 @@ class MongoDBService:
             print(f"Error getting alerts: {e}")
             return []
     
-    def create_alert(self, alert_data: Dict[str, Any]) -> str:
-        """Create a new alert"""
+    def create_alert(self, alert_data: Dict[str, Any], user_email: str = None) -> str:
+        """Create a new alert for a specific user"""
         alerts_collection = self.connection.get_collection('alerts')
         try:
             alert_data['created_at'] = datetime.utcnow()
+            # Add user_email to alert if provided
+            if user_email:
+                alert_data['user_email'] = user_email
             result = alerts_collection.insert_one(alert_data)
             return str(result.inserted_id)
         except Exception as e:
@@ -208,6 +241,18 @@ class MongoDBService:
         except Exception as e:
             print(f"Error creating report: {e}")
             return None
+    
+    def get_rules(self) -> List[Dict[str, Any]]:
+        """Get all rules"""
+        rules_collection = self.connection.get_collection('rules')
+        try:
+            rules = list(rules_collection.find({}))
+            for rule in rules:
+                rule['_id'] = str(rule['_id'])
+            return rules
+        except Exception as e:
+            print(f"Error getting rules: {e}")
+            return []
 
 # Global MongoDB service instance
 mongo_service = MongoDBService()

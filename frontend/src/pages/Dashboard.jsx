@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ChartBarIcon, CurrencyDollarIcon, ShieldCheckIcon, BellIcon, PlusIcon, TrashIcon, ArrowRightOnRectangleIcon, UserIcon } from '@heroicons/react/24/outline';
 import { ApiService } from '../services/ApiService';
 import { AuthService } from '../services/AuthService';
+import { formatINR, INRIcon } from '../utils/currency.jsx';
 
 function Dashboard() {
+  // Currency formatter for INR
   const [portfolio, setPortfolio] = useState(null);
   const [cryptoPrices, setCryptoPrices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ function Dashboard() {
     price_per_unit: ''
   });
   const [currentUser, setCurrentUser] = useState(null);
+  const [alerts, setAlerts] = useState([]);
   const navigate = useNavigate();
 
   const logout = async () => {
@@ -36,10 +39,26 @@ function Dashboard() {
     // Load current user data first
     loadCurrentUserData();
     loadDashboardData();
+    loadAlerts();
     
     // Refresh crypto prices every 30 seconds
     const interval = setInterval(loadCryptoPrices, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleAlertsChange = (event) => {
+      if (event.detail && event.detail.alerts) {
+        console.log('Dashboard received alerts update:', event.detail.alerts);
+        setAlerts(event.detail.alerts);
+      }
+    };
+    
+    window.addEventListener('alertsUpdated', handleAlertsChange);
+    
+    return () => {
+      window.removeEventListener('alertsUpdated', handleAlertsChange);
+    };
   }, []);
 
   const loadCurrentUserData = async () => {
@@ -52,44 +71,88 @@ function Dashboard() {
         setCurrentUser(currentUser);
         console.log('Current user loaded:', currentUser);
         
-        // Load user-specific portfolio data
-        const userPortfolioKey = `portfolio_${currentUser.email}`;
-        const userPortfolioData = localStorage.getItem(userPortfolioKey);
-        
-        if (userPortfolioData) {
-          const userPortfolio = JSON.parse(userPortfolioData);
-          console.log('Loading user-specific portfolio:', userPortfolio);
-          setPortfolio(userPortfolio);
-          localStorage.setItem('currentPortfolio', JSON.stringify(userPortfolio));
-          
-          // Emit portfolio update event for other pages
-          window.dispatchEvent(new CustomEvent('portfolioUpdated', { 
-            detail: { portfolio: userPortfolio, timestamp: Date.now() } 
-          }));
-        } else {
-          console.log('No user portfolio found, creating default portfolio');
-          // Create a default portfolio for new users
-          const defaultPortfolio = {
-            total_value: 0,
-            predicted_return: 0.08,
-            risk_level: 'Medium',
-            assets: []
-          };
-          setPortfolio(defaultPortfolio);
-          localStorage.setItem('currentPortfolio', JSON.stringify(defaultPortfolio));
-          // Store user-specific portfolio
-          localStorage.setItem(userPortfolioKey, JSON.stringify(defaultPortfolio));
-        }
-        
-        // Load fresh user data from database (if available)
+        // Load portfolio from database first
         try {
           const freshUserData = await AuthService.getUserData();
-          if (freshUserData) {
-            setCurrentUser(freshUserData);
-            console.log('Fresh user data loaded:', freshUserData);
+          if (freshUserData && freshUserData.portfolio) {
+            console.log('Loading portfolio from database:', freshUserData.portfolio);
+            setPortfolio(freshUserData.portfolio);
+            
+            // Also save to localStorage as backup
+            const userPortfolioKey = `portfolio_${currentUser.email}`;
+            localStorage.setItem(userPortfolioKey, JSON.stringify(freshUserData.portfolio));
+            localStorage.setItem('currentPortfolio', JSON.stringify(freshUserData.portfolio));
+            
+            // Emit portfolio update event for other pages
+            window.dispatchEvent(new CustomEvent('portfolioUpdated', { 
+              detail: { portfolio: freshUserData.portfolio, timestamp: Date.now() } 
+            }));
+          } else {
+            // Fallback to localStorage if no database data
+            const userPortfolioKey = `portfolio_${currentUser.email}`;
+            const userPortfolioData = localStorage.getItem(userPortfolioKey);
+            
+            if (userPortfolioData) {
+              const userPortfolio = JSON.parse(userPortfolioData);
+              console.log('Loading user-specific portfolio from localStorage:', userPortfolio);
+              setPortfolio(userPortfolio);
+              localStorage.setItem('currentPortfolio', JSON.stringify(userPortfolio));
+              
+              // Emit portfolio update event for other pages
+              window.dispatchEvent(new CustomEvent('portfolioUpdated', { 
+                detail: { portfolio: userPortfolio, timestamp: Date.now() } 
+              }));
+              
+              // Sync to database
+              try {
+                await ApiService.updatePortfolio(userPortfolio);
+                console.log('Portfolio synced to database');
+              } catch (syncError) {
+                console.log('Could not sync portfolio to database:', syncError);
+              }
+            } else {
+              console.log('No portfolio found, creating default portfolio');
+              // Create a default portfolio for new users
+              const defaultPortfolio = {
+                total_value: 0,
+                predicted_return: 0.0,
+                risk_level: 'Low',
+                assets: []
+              };
+              setPortfolio(defaultPortfolio);
+              localStorage.setItem('currentPortfolio', JSON.stringify(defaultPortfolio));
+              localStorage.setItem(userPortfolioKey, JSON.stringify(defaultPortfolio));
+              
+              // Save to database
+              try {
+                await ApiService.updatePortfolio(defaultPortfolio);
+                console.log('Default portfolio saved to database');
+              } catch (dbError) {
+                console.log('Could not save default portfolio to database:', dbError);
+              }
+            }
           }
         } catch (dbError) {
-          console.log('Database not available, using localStorage data');
+          console.log('Database not available, using localStorage only');
+          // Fallback to localStorage-only mode
+          const userPortfolioKey = `portfolio_${currentUser.email}`;
+          const userPortfolioData = localStorage.getItem(userPortfolioKey);
+          
+          if (userPortfolioData) {
+            const userPortfolio = JSON.parse(userPortfolioData);
+            setPortfolio(userPortfolio);
+            localStorage.setItem('currentPortfolio', JSON.stringify(userPortfolio));
+          } else {
+            const defaultPortfolio = {
+              total_value: 0,
+              predicted_return: 0.0,
+              risk_level: 'Low',
+              assets: []
+            };
+            setPortfolio(defaultPortfolio);
+            localStorage.setItem('currentPortfolio', JSON.stringify(defaultPortfolio));
+            localStorage.setItem(userPortfolioKey, JSON.stringify(defaultPortfolio));
+          }
         }
       } else {
         console.log('No current user found, redirecting to login');
@@ -106,78 +169,6 @@ function Dashboard() {
       setLoading(false);
     }
   };
-
-  // Add useEffect to recalculate portfolio metrics when portfolio changes
-  useEffect(() => {
-    // Recalculate predicted return and risk level when portfolio changes
-    if (portfolio && portfolio.assets) {
-      const totalInvestment = portfolio.total_value;
-      const cryptoWeights = {
-        'BTC': 0.4,    // High risk, high return
-        'ETH': 0.3,    // Medium risk, medium return  
-        'BNB': 0.1,    // Low risk, low return
-        'ADA': 0.1,    // Low risk, low return
-        'SOL': 0.1     // High risk, high return
-      };
-      
-      let weightedReturn = 0;
-      portfolio.assets.forEach(asset => {
-        const weight = cryptoWeights[asset.symbol] || 0.2;
-        const assetReturn = (asset.change_percentage_24h || 0) / 100;
-        weightedReturn += weight * assetReturn;
-      });
-      
-      // Update predicted return (weighted average of individual returns)
-      portfolio.predicted_return = weightedReturn;
-      
-      // Calculate risk level based on portfolio diversity
-      const uniqueSymbols = new Set(portfolio.assets.map(asset => asset.symbol));
-      const diversificationScore = uniqueSymbols.size / 5; // 5 is max possible symbols
-      
-      // Calculate portfolio volatility (weighted average of individual volatilities)
-      let portfolioVolatility = 0;
-      portfolio.assets.forEach(asset => {
-        const assetVolatility = Math.abs(asset.change_percentage_24h || 0) / 100;
-        const assetWeight = (asset.value / totalInvestment);
-        portfolioVolatility += assetWeight * assetVolatility;
-      });
-      
-      // Update risk level based on both diversification and volatility
-      if (diversificationScore >= 0.8 && portfolioVolatility < 0.2) {
-        portfolio.risk_level = 'Low';
-      } else if (diversificationScore >= 0.6 && portfolioVolatility < 0.3) {
-        portfolio.risk_level = 'Medium';
-      } else {
-        portfolio.risk_level = 'High';
-      }
-      
-      // Store additional risk metrics for potential use in other pages
-      portfolio.portfolio_risk = portfolioVolatility;
-      portfolio.volatility = portfolioVolatility;
-      
-      // Save portfolio data to user-specific localStorage
-      if (currentUser) {
-        const userPortfolioKey = `portfolio_${currentUser.email}`;
-        localStorage.setItem(userPortfolioKey, JSON.stringify(portfolio));
-        console.log('Saved user-specific portfolio for:', currentUser.email);
-      }
-      
-      // Also save to currentPortfolio for other pages
-      localStorage.setItem('currentPortfolio', JSON.stringify(portfolio));
-      
-      // Emit portfolio update event for other pages
-      window.dispatchEvent(new CustomEvent('portfolioUpdated', { 
-        detail: { portfolio, timestamp: Date.now() } 
-      }));
-      
-      console.log('Portfolio metrics updated:', {
-        predicted_return: (portfolio.predicted_return * 100).toFixed(2) + '%',
-        risk_level: portfolio.risk_level,
-        diversification_score: diversificationScore.toFixed(2),
-        portfolio_volatility: (portfolioVolatility * 100).toFixed(2) + '%'
-      });
-    }
-  }, [JSON.stringify(portfolio?.assets), currentUser?.email]);
 
   const loadDashboardData = async () => {
     try {
@@ -320,6 +311,34 @@ function Dashboard() {
     }
   };
 
+  const loadAlerts = async () => {
+    try {
+      // Get current user to load user-specific alerts
+      const currentUser = AuthService.getCurrentUser();
+      if (currentUser) {
+        // Load user-specific alerts
+        const userAlertsKey = `alerts_${currentUser.email}`;
+        const userAlertsData = localStorage.getItem(userAlertsKey);
+        
+        if (userAlertsData) {
+          const userAlerts = JSON.parse(userAlertsData);
+          console.log('Dashboard loading user-specific alerts:', userAlerts);
+          setAlerts(userAlerts);
+        } else {
+          console.log('No user alerts found, creating empty alerts array');
+          setAlerts([]);
+          localStorage.setItem(userAlertsKey, JSON.stringify([]));
+        }
+      } else {
+        console.log('No current user, using empty alerts');
+        setAlerts([]);
+      }
+    } catch (error) {
+      console.error('Error loading alerts:', error);
+      setAlerts([]);
+    }
+  };
+
   const addInvestment = async () => {
     try {
       console.log('Adding investment:', newInvestment);
@@ -366,7 +385,7 @@ function Dashboard() {
           
           let weightedReturn = 0;
           portfolio.assets.forEach(asset => {
-            const weight = cryptoWeights[asset.symbol] || 0.2;
+            const weight = crypto_weights[asset.symbol] || 0.2;
             const assetReturn = (asset.change_percentage_24h || 0) / 100;
             weightedReturn += weight * assetReturn;
           });
@@ -423,16 +442,41 @@ function Dashboard() {
           // Recalculate total value
           portfolio.total_value = portfolio.assets.reduce((sum, asset) => sum + asset.value, 0);
           
-          // Save to database
+          // Save to user-specific localStorage first
+          if (currentUser) {
+            const userPortfolioKey = `portfolio_${currentUser.email}`;
+            localStorage.setItem(userPortfolioKey, JSON.stringify(portfolio));
+            localStorage.setItem('currentPortfolio', JSON.stringify(portfolio));
+            console.log('Portfolio saved to localStorage after removal');
+          }
+          
+          // Try to save to database
           try {
             await ApiService.removePortfolioAsset(symbol);
             console.log('Investment removed from database');
           } catch (dbError) {
             console.error('Error removing from database:', dbError);
-            alert('Investment removed locally but failed to update database');
+            console.error('Error details:', dbError.response?.data);
+            console.error('Full error object:', dbError);
+            
+            // Try alternative method - update entire portfolio
+            try {
+              await ApiService.updatePortfolio(portfolio);
+              console.log('Portfolio updated in database as fallback');
+            } catch (fallbackError) {
+              console.error('Fallback also failed:', fallbackError);
+              alert('Investment removed locally but failed to update database. Data saved locally.');
+            }
           }
           
-          alert(`Removed ${symbol} investment`);
+          // Emit portfolio update event for other pages
+          window.dispatchEvent(new CustomEvent('portfolioUpdated', { 
+            detail: { portfolio, timestamp: Date.now() } 
+          }));
+          
+          alert(`Successfully removed ${symbol} investment`);
+        } else {
+          alert(`${symbol} not found in portfolio`);
         }
       }
     } catch (error) {
@@ -473,6 +517,7 @@ function Dashboard() {
                   </div>
                 )}
               </div>
+              
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setShowAddInvestment(true)}
@@ -483,21 +528,22 @@ function Dashboard() {
                 </button>
                 <button
                   onClick={logout}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                 >
                   <ArrowRightOnRectangleIcon className="h-5 w-5 mr-2" />
                   Logout
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-blue-50 rounded-lg p-4">
                 <div className="flex items-center">
-                  <CurrencyDollarIcon className="h-8 w-8 text-blue-600" />
+                  <INRIcon />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-blue-600">Total Value</p>
                     <p className="text-2xl font-bold text-blue-900">
-                      ${portfolio.total_value.toLocaleString()}
+                      {formatINR(portfolio.total_value)}
                     </p>
                   </div>
                 </div>
@@ -532,7 +578,7 @@ function Dashboard() {
                   <BellIcon className="h-8 w-8 text-purple-600" />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-purple-600">Active Alerts</p>
-                    <p className="text-2xl font-bold text-purple-900">3</p>
+                    <p className="text-2xl font-bold text-purple-900">{alerts.length}</p>
                   </div>
                 </div>
               </div>
@@ -586,7 +632,7 @@ function Dashboard() {
                     value={newInvestment.price_per_unit}
                     onChange={(e) => setNewInvestment({...newInvestment, price_per_unit: e.target.value})}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 45000"
+                    placeholder="e.g., 45000 USD (~₹37,35,000 INR)"
                     step="0.01"
                   />
                 </div>
@@ -651,10 +697,10 @@ function Dashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${asset.current_price.toLocaleString()}
+                        {formatINR(asset.current_price)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${asset.value.toLocaleString()}
+                        {formatINR(asset.value)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -703,7 +749,7 @@ function Dashboard() {
                       {crypto.symbol}
                     </p>
                     <p className="text-lg font-bold text-gray-900">
-                      ${(crypto.price || 0).toLocaleString()}
+                      {formatINR(crypto.price || 0)}
                     </p>
                   </div>
                   <div className={`text-sm font-medium ${
@@ -716,35 +762,6 @@ function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            to="/portfolio"
-            className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-          >
-            <ChartBarIcon className="h-12 w-12 text-blue-600 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Investment Mix Calculator
-            </h3>
-            <p className="text-gray-600">
-              Optimize your portfolio with rule-based allocation strategies
-            </p>
-          </Link>
-          
-          <Link
-            to="/risk"
-            className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-          >
-            <ShieldCheckIcon className="h-12 w-12 text-green-600 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Risk Analysis
-            </h3>
-            <p className="text-gray-600">
-              Analyze portfolio risk with historical data and predictions
-            </p>
-          </Link>
         </div>
       </div>
     </div>

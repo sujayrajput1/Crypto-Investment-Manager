@@ -51,6 +51,11 @@ class ApiServiceClass {
     return response.data;
   }
 
+  async removeAlert(alertId) {
+    const response = await axios.delete(`${API_BASE_URL}/alerts/${alertId}`);
+    return response.data;
+  }
+
   async addPortfolioAsset(assetData) {
     const response = await axios.post(`${API_BASE_URL}/portfolio/add`, assetData);
     return response.data;
@@ -58,6 +63,21 @@ class ApiServiceClass {
 
   async removePortfolioAsset(symbol) {
     const response = await axios.delete(`${API_BASE_URL}/portfolio/remove/${symbol}`);
+    return response.data;
+  }
+
+  async updatePortfolio(portfolioData) {
+    const response = await axios.put(`${API_BASE_URL}/portfolio`, portfolioData);
+    return response.data;
+  }
+
+  async createReport(reportData) {
+    const response = await axios.post(`${API_BASE_URL}/reports`, reportData);
+    return response.data;
+  }
+
+  async removeReport(reportId) {
+    const response = await axios.delete(`${API_BASE_URL}/reports/${reportId}`);
     return response.data;
   }
 }

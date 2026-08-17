@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartBarIcon, CurrencyDollarIcon, ArrowTrendingUpIcon, PlusIcon, TrashIcon, SparklesIcon, BookmarkIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { ApiService } from '../services/ApiService';
+import { formatINR, formatINRWithDecimals, INRIcon } from '../utils/currency.jsx';
 
 function Portfolio() {
   const [portfolio, setPortfolio] = useState(null);
@@ -355,11 +356,11 @@ function Portfolio() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="bg-blue-50 rounded-lg p-4">
                 <div className="flex items-center">
-                  <CurrencyDollarIcon className="h-8 w-8 text-blue-600" />
+                  <INRIcon />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-blue-600">Total Value</p>
                     <p className="text-2xl font-bold text-blue-900">
-                      ${portfolio.total_value.toLocaleString()}
+                      {formatINR(portfolio.total_value)}
                     </p>
                   </div>
                 </div>
@@ -421,10 +422,10 @@ function Portfolio() {
                           {asset.amount}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ${asset.current_price.toLocaleString()}
+                          {formatINR(asset.current_price)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${asset.value.toLocaleString()}
+                          {formatINR(asset.value)}
                         </td>
                       </tr>
                     ))}
@@ -485,16 +486,18 @@ function Portfolio() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Investment Amount ($)
+                        Investment Amount (USD)
                       </label>
                       <input
                         type="number"
                         value={formData.investmentAmount}
                         onChange={(e) => setFormData({...formData, investmentAmount: parseFloat(e.target.value) || 0})}
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        min="100"
+                        placeholder="10000"
+                        min="0"
                         step="100"
                       />
+                      <p className="mt-1 text-xs text-gray-500">≈ {formatINR(formData.investmentAmount || 0)} INR</p>
                     </div>
                   </div>
                 </div>
@@ -612,7 +615,10 @@ function Portfolio() {
                       {(mixCalculation.expected_return * 100).toFixed(1)}%
                     </p>
                     <p className="text-xs text-green-700 mt-1">
-                      ${(formData.investmentAmount * mixCalculation.expected_return).toLocaleString()} profit
+                      Expected profit: {formatINR(formData.investmentAmount * mixCalculation.expected_return)}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      Total value after return: {formatINR(formData.investmentAmount + (formData.investmentAmount * mixCalculation.expected_return))}
                     </p>
                   </div>
 
@@ -663,7 +669,7 @@ function Portfolio() {
                       </div>
                       <div className="mt-2 text-xs text-red-700">
                         Strategy: {mixCalculation.riskAnalysis.strategy} | 
-                        Investment: ${mixCalculation.riskAnalysis.investment_amount.toLocaleString()}
+                        Investment: {formatINR(mixCalculation.riskAnalysis.investment_amount)}
                       </div>
                     </div>
                   )}
@@ -680,7 +686,7 @@ function Portfolio() {
                               <span className="text-gray-600">{item.weight}%</span>
                             </div>
                             <div className="flex justify-between text-xs text-gray-500 mt-1">
-                              <span>${item.investment.toLocaleString()}</span>
+                              <span>{formatINR(item.investment)}</span>
                               <span>{item.quantity.toFixed(4)} units @ ${item.price}</span>
                             </div>
                             <div className="flex justify-between text-xs mt-1">
@@ -733,7 +739,7 @@ function Portfolio() {
                     </button>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">
-                    {preset.symbols.length} assets • {preset.strategy} • ${preset.investmentAmount}
+                    {preset.symbols.length} assets • {preset.strategy} • {formatINR(preset.investmentAmount)}
                   </p>
                   <button
                     onClick={() => loadPreset(preset)}
